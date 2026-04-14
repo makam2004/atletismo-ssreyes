@@ -1,0 +1,22 @@
+{
+  "name": "ssreyes-menorca-athletics-app",
+  "version": "1.0.0",
+  "description": "Render-ready app to import athletics times from Google Drive into Supabase and filter U12 athletes for SS. Reyes - CC. Menorca",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "googleapis": "^166.0.0",
+    "morgan": "^1.10.1",
+    "xlsx": "^0.18.5"
+  }
+}

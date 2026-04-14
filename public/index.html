@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SS. Reyes - CC. Menorca | U12 tiempos</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Google Drive + Supabase</p>
+          <h1>Lectura de marcas U12</h1>
+          <p class="subtitle">Club destacado: <strong id="club-name"></strong> · Categorías: <strong id="categories"></strong></p>
+        </div>
+        <div class="actions">
+          <button id="refresh-files-btn">Actualizar archivos</button>
+          <button id="import-latest-btn" class="primary">Importar último Excel</button>
+        </div>
+      </header>
+
+      <section class="panel">
+        <h2>Archivos detectados en Google Drive</h2>
+        <div id="files-status" class="status"></div>
+        <div id="files-list" class="file-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Filtros</h2>
+        <div class="filters">
+          <label>
+            Club
+            <select id="club-filter">
+              <option value="">Club por defecto</option>
+              <option value="__ALL__">Todos los clubes</option>
+            </select>
+          </label>
+          <label>
+            Categoría
+            <select id="category-filter">
+              <option value="">Todas</option>
+            </select>
+          </label>
+          <label>
+            Prueba
+            <select id="event-filter">
+              <option value="">Todas</option>
+            </select>
+          </label>
+          <label>
+            Atleta
+            <input id="athlete-filter" type="text" placeholder="Buscar por nombre" />
+          </label>
+          <button id="apply-filters-btn" class="primary">Aplicar</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="table-header">
+          <h2>Atletas y marcas</h2>
+          <span id="results-count" class="badge">0 resultados</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Atleta</th>
+                <th>Categoría</th>
+                <th>Club / Licencia</th>
+                <th>Prueba</th>
+                <th>Marca</th>
+                <th>Puesto</th>
+                <th>Archivo</th>
+              </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="table-header">
+          <h2>Clasificación completa de mejores tiempos por prueba</h2>
+          <span id="ranking-count" class="badge">0 marcas</span>
+        </div>
+        <p class="subtitle small-gap">Una sola mejor marca por atleta y prueba, incluyendo todos los clubes importados y sin límite de puestos.</p>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Ranking</th>
+                <th>Prueba</th>
+                <th>Atleta</th>
+                <th>Categoría</th>
+                <th>Club</th>
+                <th>Mejor marca</th>
+                <th>Archivo</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/script.js" defer></script>
+  </body>
+</html>
