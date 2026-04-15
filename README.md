@@ -1,84 +1,55 @@
-# Atletismo · SS. Reyes - CC. Menorca
+# Atletismo · app con sincronización automática
 
-Aplicación lista para desplegar en Render y conectarse con Supabase. Importa resultados desde un Excel/CSV/Google Sheet, filtra por categorías `U12F` y `U12M`, y muestra:
+Aplicación Node + Express preparada para Render y Supabase.
 
-- resultados filtrados del club o de cualquier club
-- clasificación completa por prueba con la mejor marca de cada atleta
-
-## Qué incluye
-
-- `Dockerfile` listo para Render
-- `package-lock.json` generado
-- backend Express en CommonJS para evitar problemas de ESM
-- soporte para importación con:
-  - `GOOGLE_SERVICE_ACCOUNT_JSON` + `DRIVE_FOLDER_ID`, o
-  - `PUBLIC_FILE_URL`, o
-  - `PUBLIC_FILE_ID`
-- interfaz web simple en `public/index.html`
-- SQL para Supabase en `supabase/schema.sql`
+## Qué hace
+- Lee automáticamente un Excel/CSV/Google Sheet desde una fuente configurada.
+- Guarda los resultados en `public.athlete_results` en Supabase.
+- Muestra filtros por categoría, club, prueba y atleta.
+- Genera la clasificación completa de mejores tiempos por prueba.
+- Sincroniza al arrancar y después de forma periódica.
 
 ## Variables de entorno
 
-Obligatorias para guardar datos:
-
+Obligatorias:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Filtros de negocio:
-
+De negocio:
 - `CLUB_NAME_FILTER=SS. Reyes - CC. Menorca`
 - `CATEGORY_FILTERS=U12F,U12M`
 
-Opciones de importación. Basta una de estas rutas:
+Fuente de datos: usa una de estas opciones.
 
-### Opción A · Google Drive con cuenta de servicio
-- `DRIVE_FOLDER_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
+### Opción simple
+- `PUBLIC_FILE_URL=https://...`
 
-### Opción B · Fichero público directo
-- `PUBLIC_FILE_URL`
+### Opción simple por id público
+- `PUBLIC_FILE_ID=<google-file-id>`
 
-### Opción C · Fichero público por id de Google Drive
-- `PUBLIC_FILE_ID`
+### Opción avanzada: carpeta de Drive + cuenta de servicio
+- `DRIVE_FOLDER_ID=<folder-id>`
+- `GOOGLE_SERVICE_ACCOUNT_JSON=<json completo>`
 
-## Despliegue en Render
-
-Recomendado: **Web Service con Docker**.
-
-- Dockerfile Path: `./Dockerfile`
-- Docker Build Context Directory: `.`
-- No pongas Docker Command
+Opcionales:
+- `AUTO_SYNC_ON_BOOT=true`
+- `AUTO_SYNC_INTERVAL_MINUTES=30`
 
 ## Supabase
+Antes de usar la app, ejecuta `supabase/schema.sql` en SQL Editor.
 
-1. Crea un proyecto.
-2. Entra en SQL Editor.
-3. Ejecuta `supabase/schema.sql`.
-4. Copia:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` (`sb_secret_...`)
+La tabla que necesita la app es `public.athlete_results`.
 
-## Google Drive
+## Render
+Usar Web Service con Docker.
 
-Si la carpeta no es tuya o no quieres cuenta de servicio, usa `PUBLIC_FILE_URL` o `PUBLIC_FILE_ID` del fichero concreto.
+### Dockerfile Path
+`./Dockerfile`
 
-## Endpoints
+### Docker Build Context Directory
+`.`
 
-- `GET /health`
-- `GET /api/config`
-- `GET /api/results`
-- `GET /api/rankings`
-- `POST /api/import`
+## Funcionamiento recomendado
+Si la URL pública siempre apunta al Excel más reciente, usa `PUBLIC_FILE_URL`.
 
-## Importación
-
-La app intenta detectar columnas con nombres como:
-
-- Atleta / Nombre
-- Categoría
-- Club / Licencia
-- Prueba
-- Marca / Tiempo
-- Puesto
-
-Si tu Excel usa otros nombres, habría que ajustar `src/excelParser.js`.
+Si lo que cambia es el archivo dentro de una carpeta y necesitas coger siempre el último automáticamente, usa `DRIVE_FOLDER_ID` + `GOOGLE_SERVICE_ACCOUNT_JSON`.

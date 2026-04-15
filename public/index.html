@@ -3,36 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Atletismo SS. Reyes</title>
+    <title>Atletismo · Rankings</title>
     <style>
       :root {
-        --bg: #f5f7fb;
+        --bg: #f3f4f6;
         --card: #ffffff;
         --line: #e5e7eb;
         --text: #111827;
         --muted: #6b7280;
-        --accent: #111827;
+        --accent: #111111;
       }
       * { box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
-      .wrap { max-width: 1280px; margin: 0 auto; padding: 24px; }
-      .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(17,24,39,.06); margin-bottom: 18px; }
-      h1,h2,h3 { margin: 0 0 10px; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 60px; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,.04);
+      }
+      h1, h2 { margin: 0 0 10px; }
       p { margin: 0; }
-      .muted { color: var(--muted); font-size: 14px; }
+      .muted { color: var(--muted); }
+      .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: start; flex-wrap: wrap; }
+      .pill { border: 1px solid var(--line); background: #f9fafb; padding: 10px 14px; border-radius: 999px; font-size: 14px; }
       .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
       .span-3 { grid-column: span 3; }
       .span-4 { grid-column: span 4; }
       .span-6 { grid-column: span 6; }
-      .span-12 { grid-column: span 12; }
-      label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--muted); }
-      input, select, button { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
-      button { cursor: pointer; background: var(--accent); color: white; border: none; font-weight: 700; }
-      button.secondary { background: #eef2ff; color: #1f2937; border: 1px solid #c7d2fe; }
-      .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-      .pill { display: inline-block; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
+      label { display: block; font-size: 14px; margin-bottom: 6px; color: var(--muted); }
+      select, input, button {
+        width: 100%; height: 44px; border-radius: 12px; border: 1px solid #d1d5db;
+        padding: 0 12px; font-size: 15px; background: #fff;
+      }
+      button { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; cursor: pointer; }
+      button.secondary { background: #fff; color: var(--text); border-color: var(--line); }
       .section-head { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 16px; flex-wrap: wrap; }
-      .status { white-space: pre-wrap; margin-top: 12px; }
       .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
       table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; }
       th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
@@ -41,8 +54,12 @@
       .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
       .stat { background: #f9fafb; border: 1px solid var(--line); padding: 10px 12px; border-radius: 12px; min-width: 160px; }
       .stat strong { display: block; font-size: 20px; }
+      .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+      .note { margin-top: 12px; font-size: 14px; color: var(--muted); }
+      .error { color: #b91c1c; }
       @media (max-width: 960px) {
         .span-3, .span-4, .span-6 { grid-column: span 12; }
+        .status-grid { grid-template-columns: repeat(1, 1fr); }
       }
     </style>
   </head>
@@ -51,45 +68,23 @@
       <div class="card">
         <div class="toolbar">
           <div>
-            <h1>Atletismo · Importación y rankings</h1>
-            <p class="muted">Carga el fichero y consulta resultados filtrados o la clasificación global completa por prueba.</p>
+            <h1>Atletismo · Rankings</h1>
+            <p class="muted">La app sincroniza el Excel automáticamente con la base de datos y luego te deja filtrar resultados y clasificaciones.</p>
           </div>
           <div class="pill" id="clubBadge">Club por defecto</div>
         </div>
         <div class="stats" id="stats"></div>
+        <div class="status-grid" id="syncCards"></div>
+        <p class="note" id="syncNote"></p>
       </div>
 
       <div class="card">
         <div class="section-head">
           <div>
-            <h2>1. Importar datos</h2>
-            <p class="muted">Puedes dejar las variables de entorno fijas o introducir aquí un fichero concreto.</p>
+            <h2>Resultados filtrados</h2>
+            <p class="muted">Selecciona categoría, club, prueba y atleta desde desplegables.</p>
           </div>
-        </div>
-        <div class="grid">
-          <div class="span-4">
-            <label for="fileId">ID del archivo público</label>
-            <input id="fileId" placeholder="Ej. 1ABCxyz..." />
-          </div>
-          <div class="span-6">
-            <label for="fileUrl">URL pública del archivo</label>
-            <input id="fileUrl" placeholder="https://drive.google.com/uc?export=download&id=..." />
-          </div>
-          <div class="span-2">
-            <label>&nbsp;</label>
-            <button id="importBtn">Importar</button>
-          </div>
-        </div>
-        <p id="importStatus" class="status muted"></p>
-      </div>
-
-      <div class="card">
-        <div class="section-head">
-          <div>
-            <h2>2. Resultados filtrados</h2>
-            <p class="muted">Consulta resultados con filtros rápidos y desplegables.</p>
-          </div>
-          <button class="secondary" id="loadResults">Actualizar resultados</button>
+          <button class="secondary" id="reloadAll">Actualizar datos en pantalla</button>
         </div>
         <div class="grid">
           <div class="span-3">
@@ -115,10 +110,9 @@
       <div class="card">
         <div class="section-head">
           <div>
-            <h2>3. Clasificación completa por prueba</h2>
-            <p class="muted">Mejor marca por atleta y por prueba, sin límite de puestos.</p>
+            <h2>Clasificación completa de mejores tiempos por prueba</h2>
+            <p class="muted">Se muestra la mejor marca de cada atleta, sin límite de puestos.</p>
           </div>
-          <button class="secondary" id="loadRankings">Actualizar clasificación</button>
         </div>
         <div class="grid">
           <div class="span-4">
@@ -136,12 +130,21 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const state = { options: { categories: [], clubs: [], events: [], athletes: [] }, config: null };
+      const state = { options: { categories: [], clubs: [], events: [], athletes: [] }, config: null, sync: null };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
 
       function tableHtml(rows, columns) {
         if (!rows.length) return '<div class="empty">Sin datos.</div>';
         const head = `<tr>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
-        const body = rows.map(row => `<tr>${columns.map(c => `<td>${row[c.key] ?? ''}</td>`).join('')}</tr>`).join('');
+        const body = rows.map(row => `<tr>${columns.map(c => `<td>${escapeHtml(row[c.key] ?? '')}</td>`).join('')}</tr>`).join('');
         return `<div class="table-wrap"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
       }
 
@@ -153,28 +156,36 @@
         select.value = selected || '';
       }
 
-      function escapeHtml(value) {
-        return String(value)
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", '&#039;');
-      }
-
       async function loadConfig() {
         const res = await fetch('/api/config');
         state.config = await res.json();
         $('clubBadge').textContent = `Club por defecto: ${state.config.clubNameFilter || 'Todos'}`;
       }
 
+      async function loadSyncStatus() {
+        const res = await fetch('/api/sync-status');
+        state.sync = await res.json();
+        const cards = [
+          ['Última sincronización', state.sync.lastSyncAt ? new Date(state.sync.lastSyncAt).toLocaleString('es-ES') : 'Pendiente'],
+          ['Filas importadas', state.sync.lastImportedRows || 0],
+          ['Fuente', state.sync.lastSource || 'No disponible'],
+          ['Estado', state.sync.running ? 'Sincronizando…' : (state.sync.lastError ? 'Con error' : 'OK')],
+        ];
+        $('syncCards').innerHTML = cards.map(([label, value]) => `<div class="stat"><span class="muted">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('');
+        $('syncNote').className = `note ${state.sync.lastError ? 'error' : ''}`;
+        $('syncNote').textContent = state.sync.lastError
+          ? `Último error: ${state.sync.lastError}`
+          : 'La aplicación actualiza la base de datos automáticamente al arrancar y de forma periódica.';
+      }
+
       async function loadOptions() {
         const res = await fetch('/api/options');
         const json = await res.json();
+        if (json.error) throw new Error(json.error);
         state.options = json;
 
-        fillSelect('category', json.categories || ['U12F', 'U12M'], 'Todas las categorías');
-        fillSelect('rankingCategory', json.categories || ['U12F', 'U12M'], 'Todas las categorías');
+        fillSelect('category', json.categories || [], 'Todas las categorías');
+        fillSelect('rankingCategory', json.categories || [], 'Todas las categorías');
         fillSelect('club', json.clubs || [], 'Todos los clubes', state.config?.clubNameFilter || '');
         fillSelect('event', json.events || [], 'Todas las pruebas');
         fillSelect('rankingEvent', json.events || [], 'Todas las pruebas');
@@ -198,6 +209,7 @@
         });
         const res = await fetch(`/api/results?${params.toString()}`);
         const json = await res.json();
+        if (json.error) throw new Error(json.error);
         $('results').innerHTML = tableHtml(json.data || [], [
           { key: 'category', label: 'Categoría' },
           { key: 'event_name', label: 'Prueba' },
@@ -215,6 +227,7 @@
         });
         const res = await fetch(`/api/rankings?${params.toString()}`);
         const json = await res.json();
+        if (json.error) throw new Error(json.error);
         $('rankings').innerHTML = tableHtml(json.data || [], [
           { key: 'ranking_event_name', label: 'Prueba' },
           { key: 'ranking_position', label: 'Posición' },
@@ -225,18 +238,8 @@
         ]);
       }
 
-      async function runImport() {
-        $('importStatus').textContent = 'Importando...';
-        const res = await fetch('/api/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileId: $('fileId').value.trim(),
-            fileUrl: $('fileUrl').value.trim(),
-          }),
-        });
-        const json = await res.json();
-        $('importStatus').textContent = JSON.stringify(json, null, 2);
+      async function refreshAll() {
+        await loadSyncStatus();
         await loadOptions();
         await loadResults();
         await loadRankings();
@@ -244,19 +247,16 @@
 
       ['category', 'club', 'event', 'athlete'].forEach((id) => $(id).addEventListener('change', loadResults));
       ['rankingCategory', 'rankingEvent'].forEach((id) => $(id).addEventListener('change', loadRankings));
-      $('loadResults').addEventListener('click', loadResults);
-      $('loadRankings').addEventListener('click', loadRankings);
-      $('importBtn').addEventListener('click', runImport);
+      $('reloadAll').addEventListener('click', refreshAll);
 
       async function boot() {
         await loadConfig();
-        await loadOptions();
-        await loadResults();
-        await loadRankings();
+        await refreshAll();
       }
 
       boot().catch((error) => {
-        $('importStatus').textContent = error.message;
+        $('syncNote').className = 'note error';
+        $('syncNote').textContent = error.message;
       });
     </script>
   </body>

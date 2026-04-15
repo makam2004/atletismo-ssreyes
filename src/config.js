@@ -18,4 +18,6 @@ module.exports = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   clubNameFilter: process.env.CLUB_NAME_FILTER || 'SS. Reyes - CC. Menorca',
   categoryFilters: readCategoryFilters(process.env.CATEGORY_FILTERS),
+  autoSyncOnBoot: String(process.env.AUTO_SYNC_ON_BOOT || 'true').toLowerCase() !== 'false',
+  autoSyncIntervalMinutes: Number(process.env.AUTO_SYNC_INTERVAL_MINUTES || 30),
 };

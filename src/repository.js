@@ -9,28 +9,38 @@ function createRepository(config) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  function enrichTableError(error) {
+    if (!error) return error;
+    const message = String(error.message || error.details || error.hint || '');
+    if (message.includes("Could not find the table 'public.athlete_results'")) {
+      error.message = "Falta la tabla public.athlete_results en Supabase. Ejecuta el archivo supabase/schema.sql en SQL Editor y vuelve a desplegar o sincronizar.";
+    }
+    return error;
+  }
+
   return {
     async health() {
       const { error } = await supabase.from('athlete_results').select('id', { count: 'exact', head: true });
-      if (error) throw error;
+      if (error) throw enrichTableError(error);
       return true;
     },
 
-    async replaceImport(rows, sourceFileName) {
+    async replaceAll(rows, sourceFileName) {
       const { error: deleteError } = await supabase
         .from('athlete_results')
         .delete()
-        .eq('source_file_name', sourceFileName);
-      if (deleteError) throw deleteError;
+        .not('id', 'is', null);
+      if (deleteError) throw enrichTableError(deleteError);
 
       if (!rows.length) {
         return { inserted: 0 };
       }
 
-      const { error: insertError } = await supabase.from('athlete_results').insert(rows);
-      if (insertError) throw insertError;
+      const payload = rows.map((row) => ({ ...row, source_file_name: sourceFileName }));
+      const { error: insertError } = await supabase.from('athlete_results').insert(payload);
+      if (insertError) throw enrichTableError(insertError);
 
-      return { inserted: rows.length };
+      return { inserted: payload.length };
     },
 
     async listResults(filters) {
@@ -43,11 +53,11 @@ function createRepository(config) {
 
       if (filters.category) query = query.eq('category', filters.category);
       if (filters.club) query = query.ilike('club_name', filters.club.includes('%') ? filters.club : `%${filters.club}%`);
-      if (filters.event) query = query.ilike('event_name', `%${filters.event}%`);
-      if (filters.athlete) query = query.ilike('athlete_name', `%${filters.athlete}%`);
+      if (filters.event) query = query.eq('event_name', filters.event);
+      if (filters.athlete) query = query.eq('athlete_name', filters.athlete);
 
       const { data, error } = await query.limit(5000);
-      if (error) throw error;
+      if (error) throw enrichTableError(error);
       return data || [];
     },
 
@@ -61,10 +71,10 @@ function createRepository(config) {
         .order('athlete_name', { ascending: true });
 
       if (filters.category) query = query.eq('category', filters.category);
-      if (filters.event) query = query.ilike('event_name', `%${filters.event}%`);
+      if (filters.event) query = query.eq('event_name', filters.event);
 
       const { data, error } = await query.limit(10000);
-      if (error) throw error;
+      if (error) throw enrichTableError(error);
 
       const byEventAthlete = new Map();
       for (const row of data || []) {
@@ -92,7 +102,7 @@ function createRepository(config) {
       }
 
       rankings.sort((a, b) => {
-        const eventCompare = String(a.ranking_event_name).localeCompare(String(b.ranking_event_name));
+        const eventCompare = String(a.ranking_event_name).localeCompare(String(b.ranking_event_name), 'es');
         if (eventCompare !== 0) return eventCompare;
         return a.ranking_position - b.ranking_position;
       });
@@ -106,7 +116,7 @@ function createRepository(config) {
         .select('category, event_name, athlete_name, club_name')
         .limit(10000);
 
-      if (error) throw error;
+      if (error) throw enrichTableError(error);
 
       const rows = data || [];
       const uniq = (values) => [...new Set(values.filter(Boolean).map((v) => String(v).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
