@@ -1,14 +1,19 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install --omit=dev
 
-COPY . .
+COPY src ./src
+COPY public ./public
+COPY supabase ./supabase
+COPY .env.example ./
+COPY README.md ./
 
 ENV NODE_ENV=production
+ENV PORT=10000
 
 EXPOSE 10000
 
-CMD ["npm", "start"]
+CMD ["node", "src/server.js"]

@@ -3,107 +3,134 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SS. Reyes - CC. Menorca | U12 tiempos</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <title>Atletismo SS. Reyes</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background: #f7f7f9; color: #222; }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+      .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 16px; }
+      h1,h2 { margin-top: 0; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+      input, select, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+      button { cursor: pointer; background: #111; color: white; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
+      .muted { color: #666; font-size: 14px; }
+      .status { white-space: pre-wrap; }
+    </style>
   </head>
   <body>
-    <main class="container">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Google Drive + Supabase</p>
-          <h1>Lectura de marcas U12</h1>
-          <p class="subtitle">Club destacado: <strong id="club-name"></strong> · Categorías: <strong id="categories"></strong></p>
-        </div>
-        <div class="actions">
-          <button id="refresh-files-btn">Actualizar archivos</button>
-          <button id="import-latest-btn" class="primary">Importar último Excel</button>
-        </div>
-      </header>
+    <div class="wrap">
+      <div class="card">
+        <h1>Atletismo · Importación y rankings</h1>
+        <p class="muted">Resultados filtrables del club y clasificación completa global por prueba.</p>
+      </div>
 
-      <section class="panel">
-        <h2>Archivos detectados en Google Drive</h2>
-        <div id="files-status" class="status"></div>
-        <div id="files-list" class="file-list"></div>
-      </section>
+      <div class="card">
+        <h2>Importación</h2>
+        <div class="grid">
+          <input id="fileId" placeholder="PUBLIC_FILE_ID opcional" />
+          <input id="fileUrl" placeholder="PUBLIC_FILE_URL opcional" />
+          <button id="importBtn">Importar</button>
+        </div>
+        <p id="importStatus" class="status muted"></p>
+      </div>
 
-      <section class="panel">
-        <h2>Filtros</h2>
-        <div class="filters">
-          <label>
-            Club
-            <select id="club-filter">
-              <option value="">Club por defecto</option>
-              <option value="__ALL__">Todos los clubes</option>
-            </select>
-          </label>
-          <label>
-            Categoría
-            <select id="category-filter">
-              <option value="">Todas</option>
-            </select>
-          </label>
-          <label>
-            Prueba
-            <select id="event-filter">
-              <option value="">Todas</option>
-            </select>
-          </label>
-          <label>
-            Atleta
-            <input id="athlete-filter" type="text" placeholder="Buscar por nombre" />
-          </label>
-          <button id="apply-filters-btn" class="primary">Aplicar</button>
+      <div class="card">
+        <h2>Resultados filtrados</h2>
+        <div class="grid">
+          <select id="category">
+            <option value="">Todas las categorías</option>
+            <option value="U12F">U12F</option>
+            <option value="U12M">U12M</option>
+          </select>
+          <input id="club" placeholder="Club" />
+          <input id="event" placeholder="Prueba" />
+          <input id="athlete" placeholder="Atleta" />
+          <button id="loadResults">Cargar resultados</button>
         </div>
-      </section>
+        <div id="results"></div>
+      </div>
 
-      <section class="panel">
-        <div class="table-header">
-          <h2>Atletas y marcas</h2>
-          <span id="results-count" class="badge">0 resultados</span>
+      <div class="card">
+        <h2>Clasificación completa de mejores tiempos por prueba</h2>
+        <div class="grid">
+          <select id="rankingCategory">
+            <option value="">Todas las categorías</option>
+            <option value="U12F">U12F</option>
+            <option value="U12M">U12M</option>
+          </select>
+          <input id="rankingEvent" placeholder="Prueba" />
+          <button id="loadRankings">Cargar clasificación</button>
         </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Atleta</th>
-                <th>Categoría</th>
-                <th>Club / Licencia</th>
-                <th>Prueba</th>
-                <th>Marca</th>
-                <th>Puesto</th>
-                <th>Archivo</th>
-              </tr>
-            </thead>
-            <tbody id="results-body"></tbody>
-          </table>
-        </div>
-      </section>
+        <div id="rankings"></div>
+      </div>
+    </div>
 
-      <section class="panel">
-        <div class="table-header">
-          <h2>Clasificación completa de mejores tiempos por prueba</h2>
-          <span id="ranking-count" class="badge">0 marcas</span>
-        </div>
-        <p class="subtitle small-gap">Una sola mejor marca por atleta y prueba, incluyendo todos los clubes importados y sin límite de puestos.</p>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Ranking</th>
-                <th>Prueba</th>
-                <th>Atleta</th>
-                <th>Categoría</th>
-                <th>Club</th>
-                <th>Mejor marca</th>
-                <th>Archivo</th>
-              </tr>
-            </thead>
-            <tbody id="ranking-body"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
 
-    <script src="/script.js" defer></script>
+      function tableHtml(rows, columns) {
+        if (!rows.length) return '<p class="muted">Sin datos.</p>';
+        const head = `<tr>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+        const body = rows.map(row => `<tr>${columns.map(c => `<td>${row[c.key] ?? ''}</td>`).join('')}</tr>`).join('');
+        return `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+      }
+
+      async function loadResults() {
+        const params = new URLSearchParams({
+          category: $('category').value,
+          club: $('club').value,
+          event: $('event').value,
+          athlete: $('athlete').value,
+        });
+        const res = await fetch(`/api/results?${params.toString()}`);
+        const json = await res.json();
+        $('results').innerHTML = tableHtml(json.data || [], [
+          { key: 'category', label: 'Categoría' },
+          { key: 'event_name', label: 'Prueba' },
+          { key: 'athlete_name', label: 'Atleta' },
+          { key: 'club_name', label: 'Club' },
+          { key: 'mark_raw', label: 'Marca' },
+          { key: 'position_raw', label: 'Puesto' },
+        ]);
+      }
+
+      async function loadRankings() {
+        const params = new URLSearchParams({
+          category: $('rankingCategory').value,
+          event: $('rankingEvent').value,
+        });
+        const res = await fetch(`/api/rankings?${params.toString()}`);
+        const json = await res.json();
+        $('rankings').innerHTML = tableHtml(json.data || [], [
+          { key: 'ranking_event_name', label: 'Prueba' },
+          { key: 'ranking_position', label: 'Posición' },
+          { key: 'category', label: 'Categoría' },
+          { key: 'athlete_name', label: 'Atleta' },
+          { key: 'club_name', label: 'Club' },
+          { key: 'mark_raw', label: 'Mejor marca' },
+        ]);
+      }
+
+      async function runImport() {
+        $('importStatus').textContent = 'Importando...';
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileId: $('fileId').value.trim(),
+            fileUrl: $('fileUrl').value.trim(),
+          }),
+        });
+        const json = await res.json();
+        $('importStatus').textContent = JSON.stringify(json, null, 2);
+      }
+
+      $('loadResults').addEventListener('click', loadResults);
+      $('loadRankings').addEventListener('click', loadRankings);
+      $('importBtn').addEventListener('click', runImport);
+      loadResults();
+      loadRankings();
+    </script>
   </body>
 </html>

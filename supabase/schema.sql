@@ -1,24 +1,18 @@
-create table if not exists public.athlete_marks (
+create table if not exists public.athlete_results (
   id bigint generated always as identity primary key,
-  source_file_id text not null,
-  source_file_name text not null,
-  source_modified_time timestamptz null,
-  source_sheet_name text not null,
-  row_number integer not null,
+  created_at timestamptz not null default now(),
   athlete_name text not null,
-  category text null,
-  club_name text null,
-  license text null,
-  event_name text null,
+  category text,
+  club_name text,
+  event_name text not null,
   mark_raw text not null,
-  mark_value_seconds double precision null,
-  position text null,
-  row_hash text not null unique,
-  inserted_at timestamptz not null default now()
+  mark_seconds double precision,
+  position_raw text,
+  athlete_license text,
+  source_file_name text not null
 );
 
-create index if not exists athlete_marks_category_idx on public.athlete_marks (category);
-create index if not exists athlete_marks_name_idx on public.athlete_marks (athlete_name);
-create index if not exists athlete_marks_club_idx on public.athlete_marks (club_name);
-create index if not exists athlete_marks_event_idx on public.athlete_marks (event_name);
-create index if not exists athlete_marks_file_idx on public.athlete_marks (source_file_id);
+create index if not exists idx_athlete_results_event_name on public.athlete_results (event_name);
+create index if not exists idx_athlete_results_category on public.athlete_results (category);
+create index if not exists idx_athlete_results_club_name on public.athlete_results (club_name);
+create index if not exists idx_athlete_results_mark_seconds on public.athlete_results (mark_seconds);

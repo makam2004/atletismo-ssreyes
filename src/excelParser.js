@@ -1,171 +1,121 @@
-import crypto from 'crypto';
-import XLSX from 'xlsx';
-import { config } from './config.js';
+const XLSX = require('xlsx');
 
-const COLUMN_ALIASES = {
-  athlete_name: ['atleta', 'nombre', 'nombre atleta', 'athlete', 'competidor'],
-  category: ['categoria', 'categoría', 'cat', 'category'],
-  club_name: ['licencia', 'club', 'club/licencia', 'equipo', 'team', 'federacion', 'federación'],
-  mark_raw: ['marca', 'tiempo', 'resultado', 'mark', 'result', 'performance'],
-  position: ['puesto', 'pos', 'posición', 'position', 'ranking'],
-  event_name: ['prueba', 'disciplina', 'evento', 'event'],
-  gender: ['sexo', 'genero', 'género', 'gender']
+const HEADER_ALIASES = {
+  athleteName: ['atleta', 'nombre', 'nombre atleta', 'athlete', 'competidor'],
+  category: ['categoria', 'categoría', 'cat'],
+  clubName: ['licencia', 'club', 'club/licencia', 'entidad', 'nombre comercial del club'],
+  eventName: ['prueba', 'evento', 'discipline', 'disciplina'],
+  mark: ['marca', 'tiempo', 'resultado', 'performance', 'result'],
+  position: ['puesto', 'posición', 'posicion', 'rank'],
+  license: ['licencia atleta', 'licencia federativa', 'n licencia'],
 };
 
-function normalizeText(value) {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+function normalizeHeader(value) {
+  return String(value || '')
     .toLowerCase()
-    .trim();
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
-function normalizeCategory(value) {
-  return normalizeText(value).toUpperCase().replace(/\s+/g, '');
-}
+function findHeaderMap(headers) {
+  const normalized = headers.map((header) => ({
+    original: header,
+    normalized: normalizeHeader(header),
+  }));
 
-function normalizeClub(value) {
-  return normalizeText(value).replace(/\s+/g, ' ');
-}
+  const result = {};
 
-function buildHeaderMap(headers) {
-  const map = {};
-  const normalizedHeaders = headers.map((header) => normalizeText(header));
-
-  for (const [target, aliases] of Object.entries(COLUMN_ALIASES)) {
-    const index = normalizedHeaders.findIndex((header) => aliases.includes(header));
-    if (index >= 0) {
-      map[target] = headers[index];
+  for (const [target, aliases] of Object.entries(HEADER_ALIASES)) {
+    const match = normalized.find((item) => aliases.includes(item.normalized));
+    if (match) {
+      result[target] = match.original;
     }
   }
 
-  return map;
+  return result;
+}
+
+function parseWorkbook(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+  if (!rows.length) {
+    return { rows: [], headerMap: {} };
+  }
+
+  const headers = Object.keys(rows[0]);
+  const headerMap = findHeaderMap(headers);
+
+  return { rows, headerMap, sheetName };
+}
+
+function normalizeRecord(row, headerMap, sourceFileName) {
+  const athleteName = String(row[headerMap.athleteName] || '').trim();
+  const category = String(row[headerMap.category] || '').trim();
+  const clubName = String(row[headerMap.clubName] || '').trim();
+  const eventName = String(row[headerMap.eventName] || '').trim();
+  const mark = String(row[headerMap.mark] || '').trim();
+  const position = String(row[headerMap.position] || '').trim();
+  const license = String(row[headerMap.license] || '').trim();
+
+  if (!athleteName || !eventName || !mark) {
+    return null;
+  }
+
+  return {
+    athlete_name: athleteName,
+    category,
+    club_name: clubName,
+    event_name: eventName,
+    mark_raw: mark,
+    mark_seconds: parseMarkToSeconds(mark),
+    position_raw: position,
+    athlete_license: license,
+    source_file_name: sourceFileName,
+  };
 }
 
 function parseMarkToSeconds(raw) {
-  if (raw === null || raw === undefined || raw === '') return null;
+  if (!raw) return null;
+  const value = String(raw).trim().replace(',', '.');
 
-  if (typeof raw === 'number') {
-    if (raw > 0 && raw < 1) {
-      return raw * 24 * 60 * 60;
-    }
-    return raw;
+  if (/^\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
   }
 
-  const text = String(raw).trim().replace(',', '.');
-  if (!text) return null;
-
-  if (/^\d+(\.\d+)?$/.test(text)) {
-    return Number(text);
-  }
-
-  const parts = text.split(':').map((part) => Number(part));
-  if (parts.some(Number.isNaN)) return null;
-
+  const parts = value.split(':').map((part) => part.trim());
   if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
+    const minutes = Number(parts[0]);
+    const seconds = Number(parts[1]);
+    if (!Number.isNaN(minutes) && !Number.isNaN(seconds)) {
+      return minutes * 60 + seconds;
+    }
   }
 
   if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    const seconds = Number(parts[2]);
+    if (![hours, minutes, seconds].some(Number.isNaN)) {
+      return hours * 3600 + minutes * 60 + seconds;
+    }
   }
 
   return null;
 }
 
-function detectCategoryFromFields(record) {
-  const categoryCandidate = record.category || '';
-  const normalizedDirect = normalizeCategory(categoryCandidate);
-  if (normalizedDirect) return normalizedDirect;
-
-  const gender = normalizeText(record.gender);
-  const athleteName = normalizeText(record.athlete_name);
-  const eventName = normalizeText(record.event_name);
-  const combined = `${athleteName} ${eventName} ${gender}`;
-
-  if (combined.includes('u12f')) return 'U12F';
-  if (combined.includes('u12m')) return 'U12M';
-  return '';
+function filterRows(records, config) {
+  const allowedCategories = new Set(config.categoryFilters.map((v) => v.toUpperCase()));
+  return records.filter((record) => {
+    return allowedCategories.has(String(record.category || '').toUpperCase());
+  });
 }
 
-export function parseWorkbook(buffer, sourceFile) {
-  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
-  const acceptedCategories = new Set(config.categoryFilters.map((item) => item.toUpperCase()));
-  const parsedRows = [];
-  const sheetSummaries = [];
-
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-    if (!rows.length) continue;
-
-    const headers = Object.keys(rows[0]);
-    const headerMap = buildHeaderMap(headers);
-    let keptInSheet = 0;
-
-    rows.forEach((row, index) => {
-      const record = {
-        athlete_name: row[headerMap.athlete_name] || '',
-        category: row[headerMap.category] || '',
-        club_name: row[headerMap.club_name] || '',
-        mark_raw: row[headerMap.mark_raw] || '',
-        position: row[headerMap.position] || '',
-        event_name: row[headerMap.event_name] || sheetName,
-        gender: row[headerMap.gender] || ''
-      };
-
-      const normalizedCategory = detectCategoryFromFields(record);
-      const athleteName = String(record.athlete_name || '').trim();
-      const markRaw = String(record.mark_raw || '').trim();
-      const clubName = String(record.club_name || '').trim();
-
-      if (!athleteName || !markRaw) return;
-      if (acceptedCategories.size && !acceptedCategories.has(normalizedCategory)) return;
-
-      const payload = {
-        source_file_id: sourceFile.id,
-        source_file_name: sourceFile.name,
-        source_modified_time: sourceFile.modifiedTime,
-        source_sheet_name: sheetName,
-        row_number: index + 2,
-        athlete_name: athleteName,
-        category: normalizedCategory,
-        club_name: clubName || null,
-        license: clubName || null,
-        event_name: String(record.event_name || sheetName).trim(),
-        mark_raw: markRaw,
-        mark_value_seconds: parseMarkToSeconds(record.mark_raw),
-        position: String(record.position || '').trim() || null,
-        row_hash: crypto
-          .createHash('sha256')
-          .update(JSON.stringify([
-            sourceFile.id,
-            sheetName,
-            athleteName,
-            normalizedCategory,
-            clubName,
-            markRaw,
-            record.event_name,
-            index + 2
-          ]))
-          .digest('hex')
-      };
-
-      parsedRows.push(payload);
-      keptInSheet += 1;
-    });
-
-    sheetSummaries.push({
-      sheetName,
-      totalRows: rows.length,
-      importedRows: keptInSheet,
-      detectedColumns: headerMap
-    });
-  }
-
-  return {
-    rowCount: parsedRows.length,
-    rows: parsedRows,
-    sheetSummaries
-  };
-}
+module.exports = {
+  parseWorkbook,
+  normalizeRecord,
+  filterRows,
+};

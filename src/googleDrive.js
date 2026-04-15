@@ -1,69 +1,92 @@
-import { google } from 'googleapis';
-import { config } from './config.js';
+const { google } = require('googleapis');
 
-function parseServiceAccountJson() {
-  const raw = config.googleServiceAccountJson.trim();
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON');
+function getAuthenticatedDrive(config) {
+  if (!config.googleServiceAccountJson) {
+    return null;
   }
-}
 
-function getDriveClient() {
-  const credentials = parseServiceAccountJson();
+  const credentials = JSON.parse(config.googleServiceAccountJson);
   const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.readonly']
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
   });
 
   return google.drive({ version: 'v3', auth });
 }
 
-const ACCEPTED_MIME_TYPES = [
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel',
-  'text/csv',
-  'application/vnd.google-apps.spreadsheet'
-];
-
-export async function listSpreadsheetFiles() {
-  const drive = getDriveClient();
-  const query = [
-    `'${config.driveFolderId}' in parents`,
-    'trashed = false',
-    `(${ACCEPTED_MIME_TYPES.map((type) => `mimeType='${type}'`).join(' or ')})`
-  ].join(' and ');
+async function listSpreadsheetFiles(config) {
+  const drive = getAuthenticatedDrive(config);
+  if (!drive) {
+    return [];
+  }
 
   const response = await drive.files.list({
-    q: query,
-    pageSize: 50,
+    q: `'${config.driveFolderId}' in parents and trashed = false and (` +
+      `mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or ` +
+      `mimeType = 'application/vnd.google-apps.spreadsheet' or ` +
+      `mimeType = 'text/csv')`,
+    fields: 'files(id, name, mimeType, modifiedTime, webViewLink)',
     orderBy: 'modifiedTime desc',
-    fields: 'files(id, name, mimeType, modifiedTime, webViewLink)'
+    pageSize: 50,
   });
 
-  return response.data.files ?? [];
+  return response.data.files || [];
 }
 
-export async function downloadSpreadsheetFile(fileId, mimeType) {
-  const drive = getDriveClient();
+function buildPublicGoogleDownloadUrl(fileId) {
+  return `https://drive.google.com/uc?export=download&id=${fileId}`;
+}
+
+async function downloadBufferFromUrl(url) {
+  const response = await fetch(url, {
+    redirect: 'follow',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 athletics-importer',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`No se pudo descargar el archivo. HTTP ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+async function downloadFileBuffer(config, fileId) {
+  const drive = getAuthenticatedDrive(config);
+  if (!drive) {
+    return downloadBufferFromUrl(buildPublicGoogleDownloadUrl(fileId));
+  }
+
+  const metadata = await drive.files.get({
+    fileId,
+    fields: 'id, name, mimeType',
+  });
+
+  const mimeType = metadata.data.mimeType;
 
   if (mimeType === 'application/vnd.google-apps.spreadsheet') {
-    const response = await drive.files.export(
+    const exportResponse = await drive.files.export(
       {
         fileId,
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
       { responseType: 'arraybuffer' }
     );
-
-    return Buffer.from(response.data);
+    return Buffer.from(exportResponse.data);
   }
 
   const response = await drive.files.get(
     { fileId, alt: 'media' },
     { responseType: 'arraybuffer' }
   );
-
   return Buffer.from(response.data);
 }
+
+module.exports = {
+  listSpreadsheetFiles,
+  buildPublicGoogleDownloadUrl,
+  downloadBufferFromUrl,
+  downloadFileBuffer,
+};
