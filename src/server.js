@@ -109,6 +109,20 @@ app.post('/api/import', async (req, res) => {
   }
 });
 
+
+app.get('/api/options', async (_req, res) => {
+  try {
+    if (!repository) {
+      return res.status(400).json({ error: 'Supabase no está configurado.' });
+    }
+
+    const options = await repository.getFilterOptions();
+    res.json(options);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/results', async (req, res) => {
   try {
     if (!repository) {

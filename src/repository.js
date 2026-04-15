@@ -42,7 +42,7 @@ function createRepository(config) {
         .order('athlete_name', { ascending: true });
 
       if (filters.category) query = query.eq('category', filters.category);
-      if (filters.club) query = query.ilike('club_name', filters.club);
+      if (filters.club) query = query.ilike('club_name', filters.club.includes('%') ? filters.club : `%${filters.club}%`);
       if (filters.event) query = query.ilike('event_name', `%${filters.event}%`);
       if (filters.athlete) query = query.ilike('athlete_name', `%${filters.athlete}%`);
 
@@ -98,6 +98,25 @@ function createRepository(config) {
       });
 
       return rankings;
+    },
+
+    async getFilterOptions() {
+      const { data, error } = await supabase
+        .from('athlete_results')
+        .select('category, event_name, athlete_name, club_name')
+        .limit(10000);
+
+      if (error) throw error;
+
+      const rows = data || [];
+      const uniq = (values) => [...new Set(values.filter(Boolean).map((v) => String(v).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+
+      return {
+        categories: uniq(rows.map((r) => r.category)),
+        events: uniq(rows.map((r) => r.event_name)),
+        athletes: uniq(rows.map((r) => r.athlete_name)),
+        clubs: uniq(rows.map((r) => r.club_name)),
+      };
     },
   };
 }

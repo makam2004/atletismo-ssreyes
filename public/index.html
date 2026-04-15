@@ -5,62 +5,130 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atletismo SS. Reyes</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 0; background: #f7f7f9; color: #222; }
-      .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-      .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 16px; }
-      h1,h2 { margin-top: 0; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-      input, select, button { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
-      button { cursor: pointer; background: #111; color: white; }
-      table { width: 100%; border-collapse: collapse; font-size: 14px; }
-      th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
-      .muted { color: #666; font-size: 14px; }
-      .status { white-space: pre-wrap; }
+      :root {
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --line: #e5e7eb;
+        --text: #111827;
+        --muted: #6b7280;
+        --accent: #111827;
+      }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+      .wrap { max-width: 1280px; margin: 0 auto; padding: 24px; }
+      .card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(17,24,39,.06); margin-bottom: 18px; }
+      h1,h2,h3 { margin: 0 0 10px; }
+      p { margin: 0; }
+      .muted { color: var(--muted); font-size: 14px; }
+      .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
+      .span-3 { grid-column: span 3; }
+      .span-4 { grid-column: span 4; }
+      .span-6 { grid-column: span 6; }
+      .span-12 { grid-column: span 12; }
+      label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--muted); }
+      input, select, button { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
+      button { cursor: pointer; background: var(--accent); color: white; border: none; font-weight: 700; }
+      button.secondary { background: #eef2ff; color: #1f2937; border: 1px solid #c7d2fe; }
+      .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+      .pill { display: inline-block; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
+      .section-head { display: flex; justify-content: space-between; gap: 12px; align-items: end; margin-bottom: 16px; flex-wrap: wrap; }
+      .status { white-space: pre-wrap; margin-top: 12px; }
+      .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; }
+      th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+      th { position: sticky; top: 0; background: #f9fafb; z-index: 1; }
+      .empty { padding: 16px; color: var(--muted); }
+      .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+      .stat { background: #f9fafb; border: 1px solid var(--line); padding: 10px 12px; border-radius: 12px; min-width: 160px; }
+      .stat strong { display: block; font-size: 20px; }
+      @media (max-width: 960px) {
+        .span-3, .span-4, .span-6 { grid-column: span 12; }
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="card">
-        <h1>Atletismo · Importación y rankings</h1>
-        <p class="muted">Resultados filtrables del club y clasificación completa global por prueba.</p>
+        <div class="toolbar">
+          <div>
+            <h1>Atletismo · Importación y rankings</h1>
+            <p class="muted">Carga el fichero y consulta resultados filtrados o la clasificación global completa por prueba.</p>
+          </div>
+          <div class="pill" id="clubBadge">Club por defecto</div>
+        </div>
+        <div class="stats" id="stats"></div>
       </div>
 
       <div class="card">
-        <h2>Importación</h2>
+        <div class="section-head">
+          <div>
+            <h2>1. Importar datos</h2>
+            <p class="muted">Puedes dejar las variables de entorno fijas o introducir aquí un fichero concreto.</p>
+          </div>
+        </div>
         <div class="grid">
-          <input id="fileId" placeholder="PUBLIC_FILE_ID opcional" />
-          <input id="fileUrl" placeholder="PUBLIC_FILE_URL opcional" />
-          <button id="importBtn">Importar</button>
+          <div class="span-4">
+            <label for="fileId">ID del archivo público</label>
+            <input id="fileId" placeholder="Ej. 1ABCxyz..." />
+          </div>
+          <div class="span-6">
+            <label for="fileUrl">URL pública del archivo</label>
+            <input id="fileUrl" placeholder="https://drive.google.com/uc?export=download&id=..." />
+          </div>
+          <div class="span-2">
+            <label>&nbsp;</label>
+            <button id="importBtn">Importar</button>
+          </div>
         </div>
         <p id="importStatus" class="status muted"></p>
       </div>
 
       <div class="card">
-        <h2>Resultados filtrados</h2>
+        <div class="section-head">
+          <div>
+            <h2>2. Resultados filtrados</h2>
+            <p class="muted">Consulta resultados con filtros rápidos y desplegables.</p>
+          </div>
+          <button class="secondary" id="loadResults">Actualizar resultados</button>
+        </div>
         <div class="grid">
-          <select id="category">
-            <option value="">Todas las categorías</option>
-            <option value="U12F">U12F</option>
-            <option value="U12M">U12M</option>
-          </select>
-          <input id="club" placeholder="Club" />
-          <input id="event" placeholder="Prueba" />
-          <input id="athlete" placeholder="Atleta" />
-          <button id="loadResults">Cargar resultados</button>
+          <div class="span-3">
+            <label for="category">Categoría</label>
+            <select id="category"></select>
+          </div>
+          <div class="span-3">
+            <label for="club">Club</label>
+            <select id="club"></select>
+          </div>
+          <div class="span-3">
+            <label for="event">Prueba</label>
+            <select id="event"></select>
+          </div>
+          <div class="span-3">
+            <label for="athlete">Atleta</label>
+            <select id="athlete"></select>
+          </div>
         </div>
         <div id="results"></div>
       </div>
 
       <div class="card">
-        <h2>Clasificación completa de mejores tiempos por prueba</h2>
+        <div class="section-head">
+          <div>
+            <h2>3. Clasificación completa por prueba</h2>
+            <p class="muted">Mejor marca por atleta y por prueba, sin límite de puestos.</p>
+          </div>
+          <button class="secondary" id="loadRankings">Actualizar clasificación</button>
+        </div>
         <div class="grid">
-          <select id="rankingCategory">
-            <option value="">Todas las categorías</option>
-            <option value="U12F">U12F</option>
-            <option value="U12M">U12M</option>
-          </select>
-          <input id="rankingEvent" placeholder="Prueba" />
-          <button id="loadRankings">Cargar clasificación</button>
+          <div class="span-4">
+            <label for="rankingCategory">Categoría</label>
+            <select id="rankingCategory"></select>
+          </div>
+          <div class="span-4">
+            <label for="rankingEvent">Prueba</label>
+            <select id="rankingEvent"></select>
+          </div>
         </div>
         <div id="rankings"></div>
       </div>
@@ -68,12 +136,57 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
+      const state = { options: { categories: [], clubs: [], events: [], athletes: [] }, config: null };
 
       function tableHtml(rows, columns) {
-        if (!rows.length) return '<p class="muted">Sin datos.</p>';
+        if (!rows.length) return '<div class="empty">Sin datos.</div>';
         const head = `<tr>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
         const body = rows.map(row => `<tr>${columns.map(c => `<td>${row[c.key] ?? ''}</td>`).join('')}</tr>`).join('');
-        return `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+        return `<div class="table-wrap"><table><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+      }
+
+      function fillSelect(id, options, placeholder, selected = '') {
+        const select = $(id);
+        select.innerHTML = [`<option value="">${placeholder}</option>`]
+          .concat(options.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
+          .join('');
+        select.value = selected || '';
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#039;');
+      }
+
+      async function loadConfig() {
+        const res = await fetch('/api/config');
+        state.config = await res.json();
+        $('clubBadge').textContent = `Club por defecto: ${state.config.clubNameFilter || 'Todos'}`;
+      }
+
+      async function loadOptions() {
+        const res = await fetch('/api/options');
+        const json = await res.json();
+        state.options = json;
+
+        fillSelect('category', json.categories || ['U12F', 'U12M'], 'Todas las categorías');
+        fillSelect('rankingCategory', json.categories || ['U12F', 'U12M'], 'Todas las categorías');
+        fillSelect('club', json.clubs || [], 'Todos los clubes', state.config?.clubNameFilter || '');
+        fillSelect('event', json.events || [], 'Todas las pruebas');
+        fillSelect('rankingEvent', json.events || [], 'Todas las pruebas');
+        fillSelect('athlete', json.athletes || [], 'Todos los atletas');
+
+        const stats = [
+          ['Categorías', (json.categories || []).length],
+          ['Pruebas', (json.events || []).length],
+          ['Atletas', (json.athletes || []).length],
+          ['Clubes', (json.clubs || []).length],
+        ];
+        $('stats').innerHTML = stats.map(([label, value]) => `<div class="stat"><span class="muted">${label}</span><strong>${value}</strong></div>`).join('');
       }
 
       async function loadResults() {
@@ -124,13 +237,27 @@
         });
         const json = await res.json();
         $('importStatus').textContent = JSON.stringify(json, null, 2);
+        await loadOptions();
+        await loadResults();
+        await loadRankings();
       }
 
+      ['category', 'club', 'event', 'athlete'].forEach((id) => $(id).addEventListener('change', loadResults));
+      ['rankingCategory', 'rankingEvent'].forEach((id) => $(id).addEventListener('change', loadRankings));
       $('loadResults').addEventListener('click', loadResults);
       $('loadRankings').addEventListener('click', loadRankings);
       $('importBtn').addEventListener('click', runImport);
-      loadResults();
-      loadRankings();
+
+      async function boot() {
+        await loadConfig();
+        await loadOptions();
+        await loadResults();
+        await loadRankings();
+      }
+
+      boot().catch((error) => {
+        $('importStatus').textContent = error.message;
+      });
     </script>
   </body>
 </html>
