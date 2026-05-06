@@ -8,21 +8,29 @@
 </head>
 <body>
   <main class="container">
-    <header>
-      <div>
+    <header class="hero">
+      <div class="heroText">
+        <span class="eyebrow">SS. Reyes - CC. Menorca</span>
         <h1>Ranking Atletismo U12</h1>
-        <p>Datos cargados desde Supabase. El Excel se sincroniza automáticamente desde Google Drive.</p>
       </div>
-      <button id="syncBtn">Actualizar ahora</button>
+      <button id="syncBtn" class="primaryBtn">Actualizar ahora</button>
     </header>
 
-    <section class="card" id="statusCard">
-      <h2>Estado de sincronización</h2>
+    <section class="statusPanel" id="statusCard">
+      <div>
+        <span class="sectionLabel">Estado</span>
+        <h2>Sincronización</h2>
+      </div>
       <p id="statusText">Cargando estado...</p>
     </section>
 
-    <section class="card">
-      <h2>Filtros</h2>
+    <section class="card filtersCard">
+      <div class="cardHeader">
+        <div>
+          <span class="sectionLabel">Consulta</span>
+          <h2>Filtros</h2>
+        </div>
+      </div>
       <div class="filters">
         <label>Categoría<select id="category"><option value="">Todas</option></select></label>
         <label>Prueba agrupada<select id="event"><option value="">Todas</option></select></label>
@@ -32,13 +40,30 @@
     </section>
 
     <section class="card">
-      <h2>Clasificación completa por prueba</h2>
+      <div class="cardHeader">
+        <div>
+          <span class="sectionLabel">Ranking</span>
+          <h2>Clasificación completa por prueba</h2>
+        </div>
+      </div>
       <div id="ranking"></div>
     </section>
 
     <section class="card">
-      <h2>Resultados filtrados</h2>
-      <div class="tableWrap"><table id="resultsTable"><thead><tr><th>Categoría</th><th>Prueba</th><th>Superficie</th><th>Atleta</th><th>Club</th><th>Marca</th></tr></thead><tbody></tbody></table></div>
+      <div class="cardHeader">
+        <div>
+          <span class="sectionLabel">Detalle</span>
+          <h2>Resultados filtrados</h2>
+        </div>
+      </div>
+      <div class="tableWrap">
+        <table id="resultsTable">
+          <thead>
+            <tr><th>Categoría</th><th>Prueba</th><th>Superficie</th><th>Atleta</th><th>Club</th><th>Marca</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
   </main>
   <script src="/app.js"></script>
