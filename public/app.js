@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const filters = ['category', 'event', 'club', 'athlete'];
+let refreshTimer = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -10,18 +11,24 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-function qs() {
+function hasAnyFilter() {
+  return filters.some(f => $(f)?.value);
+}
+
+function qs(extra = {}) {
   const p = new URLSearchParams();
   filters.forEach(f => {
     const el = $(f);
     const v = el ? el.value : '';
     if (v) p.set(f, v);
   });
+  Object.entries(extra).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') p.set(k, v);
+  });
   return p.toString();
 }
 
 function optionsQs() {
-  // Para cargar desplegables dependientes, especialmente pruebas según categoría.
   const p = new URLSearchParams();
   ['category', 'event', 'club'].forEach(f => {
     const el = $(f);
@@ -77,20 +84,46 @@ async function loadOptions() {
 }
 
 async function loadResults() {
-  const rows = await api('/api/results?' + qs());
   const tb = document.querySelector('#resultsTable tbody');
   tb.innerHTML = '';
+
+  if (!hasAnyFilter()) {
+    tb.innerHTML = '<tr><td colspan="6" class="muted">Selecciona una categoría, prueba, club o atleta para ver resultados.</td></tr>';
+    return;
+  }
+
+  const rows = await api('/api/results?' + qs({ limit: 500 }));
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="6" class="muted">No hay datos para estos filtros.</td></tr>';
+    return;
+  }
+
   rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(r.category)}</td><td>${escapeHtml(r.event_group || r.event_name)}</td><td>${escapeHtml(r.surface || '')}</td><td>${escapeHtml(r.athlete_name)}</td><td>${escapeHtml(r.club_name)}</td><td>${escapeHtml(r.mark_raw)}</td>`;
     tb.appendChild(tr);
   });
+
+  if (rows.length >= 500) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="6" class="muted">Mostrando los primeros 500 resultados. Añade más filtros para acotar.</td>';
+    tb.appendChild(tr);
+  }
 }
 
 async function loadRanking() {
-  const groups = await api('/api/ranking?' + qs());
   const root = $('ranking');
   root.innerHTML = '';
+
+  if (!hasAnyFilter()) {
+    root.innerHTML = '<p class="muted">Selecciona al menos una categoría, prueba, club o atleta para cargar la clasificación.</p>';
+    return;
+  }
+
+  root.innerHTML = '<p class="muted">Cargando clasificación...</p>';
+  const groups = await api('/api/ranking?' + qs());
+  root.innerHTML = '';
+
   if (!groups.length) {
     root.innerHTML = '<p class="muted">No hay datos para estos filtros.</p>';
     return;
@@ -106,23 +139,26 @@ async function loadRanking() {
 async function refresh() {
   await loadStatus();
   await loadOptions();
-  await loadRanking();
-  await loadResults();
+  await Promise.all([loadRanking(), loadResults()]);
 }
 
-async function refreshAfterFilterChange(changedFilter) {
-  // Si cambia la categoría, puede cambiar la lista de pruebas FEM/MASC.
-  // Si la prueba ya no existe para esa categoría, fillSelect la deja en "Todos".
+async function refreshAfterFilterChange() {
+  $('ranking').innerHTML = '<p class="muted">Actualizando...</p>';
+  document.querySelector('#resultsTable tbody').innerHTML = '<tr><td colspan="6" class="muted">Actualizando...</td></tr>';
   await loadOptions();
-  await loadRanking();
-  await loadResults();
+  await Promise.all([loadRanking(), loadResults()]);
 }
 
-filters.forEach(f => $(f).addEventListener('change', () => {
-  refreshAfterFilterChange(f).catch(e => {
-    $('statusText').innerHTML = `<span class="error">${escapeHtml(e.message)}</span>`;
-  });
-}));
+function scheduleFilterRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    refreshAfterFilterChange().catch(e => {
+      $('statusText').innerHTML = `<span class="error">${escapeHtml(e.message)}</span>`;
+    });
+  }, 250);
+}
+
+filters.forEach(f => $(f).addEventListener('change', scheduleFilterRefresh));
 
 $('syncBtn').addEventListener('click', async () => {
   $('syncBtn').disabled = true;

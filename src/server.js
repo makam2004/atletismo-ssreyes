@@ -30,7 +30,8 @@ app.get('/api/options', asyncRoute(async (req, res) => {
     category: req.query.category,
     club: req.query.club,
     event: req.query.event,
-    athlete: req.query.athlete
+    athlete: req.query.athlete,
+    limit: req.query.limit
   }));
 }));
 
@@ -39,7 +40,8 @@ app.get('/api/results', asyncRoute(async (req, res) => {
     category: req.query.category,
     club: req.query.club,
     event: req.query.event,
-    athlete: req.query.athlete
+    athlete: req.query.athlete,
+    limit: req.query.limit
   }));
 }));
 
@@ -48,7 +50,8 @@ app.get('/api/ranking', asyncRoute(async (req, res) => {
     category: req.query.category,
     club: req.query.club,
     event: req.query.event,
-    athlete: req.query.athlete
+    athlete: req.query.athlete,
+    limit: req.query.limit
   }));
 }));
 

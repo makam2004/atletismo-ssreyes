@@ -18,6 +18,9 @@ create table if not exists public.athlete_results (
   -- "Categoría atleta" -> category
   -- "Licencia: Nombre comercial" -> club_name
   event_name text,
+  event_group text,
+  surface text,
+  event_gender text,
   mark_raw text,
   mark_value double precision,
   athlete_name text,
@@ -33,12 +36,32 @@ create table if not exists public.athlete_results (
   updated_at timestamptz default now()
 );
 
+-- Compatibilidad si la tabla ya existía antes de esta versión
+alter table public.athlete_results add column if not exists event_group text;
+alter table public.athlete_results add column if not exists surface text;
+alter table public.athlete_results add column if not exists event_gender text;
+
+-- Relleno inicial para datos ya importados anteriormente
+update public.athlete_results
+set
+  event_group = trim(regexp_replace(coalesce(event_name, ''), '(\s|\.)+(AL|PC)$', '', 'i')),
+  surface = upper(substring(coalesce(event_name, '') from '(?:\s|\.)(AL|PC)$')),
+  event_gender = case
+    when lower(coalesce(event_name, '')) like '%fem%' then 'F'
+    when lower(coalesce(event_name, '')) like '%masc%' then 'M'
+    else null
+  end
+where event_group is null or event_group = '';
+
 create index if not exists idx_athlete_results_category on public.athlete_results(category);
 create index if not exists idx_athlete_results_event on public.athlete_results(event_name);
+create index if not exists idx_athlete_results_event_group on public.athlete_results(event_group);
+create index if not exists idx_athlete_results_event_gender on public.athlete_results(event_gender);
 create index if not exists idx_athlete_results_club on public.athlete_results(club_name);
 create index if not exists idx_athlete_results_athlete on public.athlete_results(athlete_name);
 create index if not exists idx_athlete_results_mark on public.athlete_results(mark_value);
 create index if not exists idx_athlete_results_source on public.athlete_results(source_file_id);
+create index if not exists idx_athlete_results_filters on public.athlete_results(category, event_group, club_name, athlete_name);
 
 create table if not exists public.sync_status (
   id integer primary key default 1,

@@ -133,6 +133,25 @@ function markToNumber(mark) {
   return Number.isFinite(n) ? n : null;
 }
 
+
+function getEventSurface(eventName) {
+  const event = clean(eventName);
+  const match = event.match(/(?:\s|\.)(AL|PC)$/i);
+  return match ? match[1].toUpperCase() : '';
+}
+
+function getEventGroup(eventName) {
+  const event = clean(eventName);
+  return clean(event.replace(/(?:\s|\.)(AL|PC)$/i, ''));
+}
+
+function getEventGender(eventName) {
+  const event = norm(getEventGroup(eventName) || eventName);
+  if (event.includes('fem')) return 'F';
+  if (event.includes('masc')) return 'M';
+  return '';
+}
+
 function rowIsUseful(record) {
   return record.athlete_name && record.event_name && record.mark_raw && record.category;
 }
@@ -153,6 +172,9 @@ function parseSpreadsheet(buffer, sourceFile) {
         sheet_name: sheetName,
         row_number: idx + 2,
         event_name: detectEvent(row),
+        event_group: getEventGroup(detectEvent(row)),
+        surface: getEventSurface(detectEvent(row)),
+        event_gender: getEventGender(detectEvent(row)),
         mark_raw: detectMark(row),
         mark_value: markToNumber(detectMark(row)),
         athlete_name: detectAthlete(row),
