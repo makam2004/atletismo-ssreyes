@@ -25,7 +25,14 @@ app.post('/api/sync', asyncRoute(async (req, res) => {
   res.json(await syncLatest({ force: true }));
 }));
 
-app.get('/api/options', asyncRoute(async (req, res) => res.json(await getOptions())));
+app.get('/api/options', asyncRoute(async (req, res) => {
+  res.json(await getOptions({
+    category: req.query.category,
+    club: req.query.club,
+    event: req.query.event,
+    athlete: req.query.athlete
+  }));
+}));
 
 app.get('/api/results', asyncRoute(async (req, res) => {
   res.json(await getResults({

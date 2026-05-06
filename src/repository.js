@@ -72,6 +72,23 @@ function getEventGroup(eventName) {
   return cleanValue(event.replace(/(?:\s|\.)(AL|PC)$/i, ''));
 }
 
+
+function getCategoryGender(category) {
+  const value = cleanValue(category) || '';
+  if (/F$/i.test(value)) return 'F';
+  if (/M$/i.test(value)) return 'M';
+  return null;
+}
+
+function eventMatchesCategoryGender(eventName, category) {
+  const gender = getCategoryGender(category);
+  if (!gender) return true;
+  const event = normalizeText(getEventGroup(eventName) || eventName);
+  if (gender === 'F') return event.includes('fem');
+  if (gender === 'M') return event.includes('masc');
+  return true;
+}
+
 function decorateRow(row) {
   return {
     ...row,
@@ -133,33 +150,52 @@ async function replaceSourceRows(sourceFileId, rows) {
   return { inserted };
 }
 
-async function getOptions() {
+async function getOptions(filters = {}) {
   const rows = await fetchAllRows({
     columns: 'category,club_name,event_name,athlete_name',
     orderBy: [{ column: 'event_name', options: { ascending: true } }]
   });
 
-  const unique = field => sortEs([
+  const uniqueFromRows = (sourceRows, field) => sortEs([
     ...new Set(
-      rows
+      sourceRows
         .map(row => cleanValue(row[field]))
         .filter(Boolean)
     )
   ]);
 
+  // Las categorías se muestran siempre completas, sin limitar a U12F/U12M.
+  const categories = uniqueFromRows(rows, 'category');
+
+  // Las pruebas sí dependen de la categoría seleccionada:
+  // categorías terminadas en F -> solo pruebas que contengan FEM
+  // categorías terminadas en M -> solo pruebas que contengan MASC
+  let eventRows = rows;
+  if (filters.category) {
+    eventRows = eventRows.filter(row => cleanValue(row.category) === cleanValue(filters.category));
+    eventRows = eventRows.filter(row => eventMatchesCategoryGender(row.event_name, filters.category));
+  }
+
   const events = sortEs([
     ...new Set(
-      rows
+      eventRows
         .map(row => getEventGroup(row.event_name))
         .filter(Boolean)
     )
   ]);
 
+  // Clubes y atletas también se filtran suavemente por categoría/prueba si están seleccionadas,
+  // para que los desplegables sean más manejables.
+  let optionRows = rows;
+  if (filters.category) optionRows = optionRows.filter(row => cleanValue(row.category) === cleanValue(filters.category));
+  if (filters.event) optionRows = optionRows.filter(row => getEventGroup(row.event_name) === filters.event);
+  if (filters.club) optionRows = optionRows.filter(row => cleanValue(row.club_name) === cleanValue(filters.club));
+
   return {
-    categories: unique('category'),
-    clubs: unique('club_name'),
+    categories,
+    clubs: uniqueFromRows(optionRows, 'club_name'),
     events,
-    athletes: unique('athlete_name')
+    athletes: uniqueFromRows(optionRows, 'athlete_name')
   };
 }
 
@@ -252,5 +288,6 @@ module.exports = {
   saveSyncStatus,
   getEventGroup,
   getEventSurface,
-  isFieldEvent
+  isFieldEvent,
+  eventMatchesCategoryGender
 };

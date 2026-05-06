@@ -164,7 +164,8 @@ function parseSpreadsheet(buffer, sourceFile) {
         imported_at: new Date().toISOString()
       };
 
-      if (rowIsUseful(record) && config.categoryFilters.includes(record.category)) {
+      const categoryAllowed = !config.categoryFilters.length || config.categoryFilters.includes(record.category);
+      if (rowIsUseful(record) && categoryAllowed) {
         rows.push(record);
       }
     });

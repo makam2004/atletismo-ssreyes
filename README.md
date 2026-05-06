@@ -34,7 +34,7 @@ SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxxx
 DRIVE_FOLDER_ID=ID_DE_TU_CARPETA_DE_DRIVE
 GOOGLE_SERVICE_ACCOUNT_JSON={JSON_COMPLETO_DE_GOOGLE}
-CATEGORY_FILTERS=U12F,U12M
+CATEGORY_FILTERS=
 CLUB_NAME_FILTER=SS. Reyes - CC. Menorca
 AUTO_SYNC_ON_BOOT=true
 AUTO_SYNC_INTERVAL_MINUTES=30
@@ -43,6 +43,7 @@ AUTO_SYNC_INTERVAL_MINUTES=30
 Notas:
 - `DRIVE_FOLDER_ID` es solo el ID de la carpeta, no la URL entera.
 - `GOOGLE_SERVICE_ACCOUNT_JSON` debe ser el JSON completo de Google.
+- `CATEGORY_FILTERS` es opcional. Déjalo vacío o elimínalo para importar todas las categorías. Si algún día quieres limitar, usa por ejemplo `CATEGORY_FILTERS=U12F,U12M`.
 - No subas el JSON a GitHub.
 
 ## 4. Render
@@ -120,3 +121,14 @@ Se consideran concursos las pruebas cuyo nombre contiene:
 - Pértiga / Pertiga
 
 No es necesario cambiar Supabase ni reimportar datos. La mejora se aplica al calcular resultados y rankings.
+
+
+## Mejora v7: todas las categorías y pruebas por género
+
+- La importación ya no se limita a `U12F` y `U12M` si `CATEGORY_FILTERS` está vacío o no existe.
+- El filtro de categoría se carga con todas las categorías presentes en Supabase.
+- Si eliges una categoría terminada en `F`, el desplegable de pruebas muestra solo pruebas que contienen `FEM`.
+- Si eliges una categoría terminada en `M`, el desplegable de pruebas muestra solo pruebas que contienen `MASC`.
+- Si no eliges categoría, el desplegable muestra todas las pruebas agrupadas.
+
+Después de desplegar esta versión, pulsa **Actualizar ahora** para reimportar el Excel completo con todas las categorías.

@@ -28,7 +28,9 @@ module.exports = {
   supabaseServiceRoleKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
   driveFolderId: requireEnv('DRIVE_FOLDER_ID'),
   googleCredentials: getGoogleCredentials(),
-  categoryFilters: parseList(process.env.CATEGORY_FILTERS, ['U12F', 'U12M']),
+  // Si CATEGORY_FILTERS está vacío o no existe, se importan todas las categorías.
+  // Ejemplo para limitar: CATEGORY_FILTERS=U12F,U12M
+  categoryFilters: parseList(process.env.CATEGORY_FILTERS, []),
   clubNameFilter: process.env.CLUB_NAME_FILTER || 'SS. Reyes - CC. Menorca',
   autoSyncOnBoot: String(process.env.AUTO_SYNC_ON_BOOT || 'true').toLowerCase() === 'true',
   autoSyncIntervalMinutes: Number(process.env.AUTO_SYNC_INTERVAL_MINUTES || 30)
