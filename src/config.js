@@ -1,23 +1,35 @@
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
-function readCategoryFilters(value) {
-  return String(value || 'U12F,U12M')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Falta la variable de entorno ${name}`);
+  return value;
+}
+
+function parseList(value, fallback = []) {
+  if (!value) return fallback;
+  return value.split(',').map(v => v.trim()).filter(Boolean);
+}
+
+function getGoogleCredentials() {
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    // Por si Render guarda saltos de línea escapados
+    return JSON.parse(raw.replace(/\\n/g, '\n'));
+  }
 }
 
 module.exports = {
-  port: Number(process.env.PORT || 10000),
-  driveFolderId: process.env.DRIVE_FOLDER_ID || '',
-  googleServiceAccountJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON || '',
-  publicFileUrl: process.env.PUBLIC_FILE_URL || '',
-  publicFileId: process.env.PUBLIC_FILE_ID || '',
-  supabaseUrl: process.env.SUPABASE_URL || '',
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  port: process.env.PORT || 10000,
+  supabaseUrl: requireEnv('SUPABASE_URL'),
+  supabaseServiceRoleKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
+  driveFolderId: requireEnv('DRIVE_FOLDER_ID'),
+  googleCredentials: getGoogleCredentials(),
+  categoryFilters: parseList(process.env.CATEGORY_FILTERS, ['U12F', 'U12M']),
   clubNameFilter: process.env.CLUB_NAME_FILTER || 'SS. Reyes - CC. Menorca',
-  categoryFilters: readCategoryFilters(process.env.CATEGORY_FILTERS),
-  autoSyncOnBoot: String(process.env.AUTO_SYNC_ON_BOOT || 'true').toLowerCase() !== 'false',
-  autoSyncIntervalMinutes: Number(process.env.AUTO_SYNC_INTERVAL_MINUTES || 30),
+  autoSyncOnBoot: String(process.env.AUTO_SYNC_ON_BOOT || 'true').toLowerCase() === 'true',
+  autoSyncIntervalMinutes: Number(process.env.AUTO_SYNC_INTERVAL_MINUTES || 30)
 };
