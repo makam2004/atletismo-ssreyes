@@ -12,6 +12,32 @@ function sortEs(values) {
   return values.sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
 }
 
+function getEventSurface(eventName) {
+  const event = cleanValue(eventName) || '';
+  const match = event.match(/(?:\s|\.)(AL|PC)$/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function getEventGroup(eventName) {
+  const event = cleanValue(eventName) || '';
+  if (!event) return null;
+
+  // Agrupa pruebas que terminan en AL o PC.
+  // Ejemplos:
+  // 60m FEM. AL  -> 60m FEM.
+  // 60m FEM. PC  -> 60m FEM.
+  // Altura MASC. AL -> Altura MASC.
+  return cleanValue(event.replace(/(?:\s|\.)(AL|PC)$/i, ''));
+}
+
+function decorateRow(row) {
+  return {
+    ...row,
+    event_group: getEventGroup(row.event_name),
+    surface: getEventSurface(row.event_name)
+  };
+}
+
 async function fetchAllRows({ columns = '*', filters = {}, orderBy = null, maxPages = 200 } = {}) {
   let all = [];
 
@@ -29,7 +55,7 @@ async function fetchAllRows({ columns = '*', filters = {}, orderBy = null, maxPa
 
     if (filters.category) query = query.eq('category', filters.category);
     if (filters.club) query = query.eq('club_name', filters.club);
-    if (filters.event) query = query.eq('event_name', filters.event);
+    // El filtro de prueba se aplica después en memoria porque ahora el desplegable usa prueba agrupada.
     if (filters.athlete) query = query.eq('athlete_name', filters.athlete);
 
     const { data, error } = await query;
@@ -66,9 +92,6 @@ async function replaceSourceRows(sourceFileId, rows) {
 }
 
 async function getOptions() {
-  // Importante: Supabase/PostgREST devuelve por defecto solo una página de resultados.
-  // Si hay más de 1000 filas, algunas pruebas podían no aparecer en los desplegables.
-  // Por eso aquí paginamos todas las filas y construimos los valores únicos en servidor.
   const rows = await fetchAllRows({
     columns: 'category,club_name,event_name,athlete_name',
     orderBy: [{ column: 'event_name', options: { ascending: true } }]
@@ -82,16 +105,24 @@ async function getOptions() {
     )
   ]);
 
+  const events = sortEs([
+    ...new Set(
+      rows
+        .map(row => getEventGroup(row.event_name))
+        .filter(Boolean)
+    )
+  ]);
+
   return {
     categories: unique('category'),
     clubs: unique('club_name'),
-    events: unique('event_name'),
+    events,
     athletes: unique('athlete_name')
   };
 }
 
 async function getResults(filters = {}) {
-  const rows = await fetchAllRows({
+  let rows = await fetchAllRows({
     columns: '*',
     filters,
     orderBy: [
@@ -100,7 +131,19 @@ async function getResults(filters = {}) {
     ]
   });
 
-  return rows;
+  rows = rows.map(decorateRow);
+
+  if (filters.event) {
+    rows = rows.filter(row => row.event_group === filters.event);
+  }
+
+  return rows.sort((a, b) => {
+    const byEvent = String(a.event_group || '').localeCompare(String(b.event_group || ''), 'es', { numeric: true, sensitivity: 'base' });
+    if (byEvent !== 0) return byEvent;
+    const byMark = (a.mark_value ?? Infinity) - (b.mark_value ?? Infinity);
+    if (byMark !== 0) return byMark;
+    return String(a.athlete_name || '').localeCompare(String(b.athlete_name || ''), 'es');
+  });
 }
 
 async function getRanking(filters = {}) {
@@ -109,10 +152,10 @@ async function getRanking(filters = {}) {
 
   for (const row of rows) {
     const category = cleanValue(row.category) || '';
-    const eventName = cleanValue(row.event_name) || '';
+    const eventGroup = cleanValue(row.event_group) || '';
     const athleteName = cleanValue(row.athlete_name) || '';
     const clubName = cleanValue(row.club_name) || '';
-    const key = `${category}|${eventName}|${athleteName}|${clubName}`;
+    const key = `${category}|${eventGroup}|${athleteName}|${clubName}`;
     const current = best.get(key);
     const rowValue = row.mark_value ?? Infinity;
     const currentValue = current?.mark_value ?? Infinity;
@@ -124,7 +167,7 @@ async function getRanking(filters = {}) {
 
   const grouped = {};
   for (const row of best.values()) {
-    const key = `${row.category || 'Sin categoría'} - ${row.event_name || 'Sin prueba'}`;
+    const key = `${row.category || 'Sin categoría'} - ${row.event_group || 'Sin prueba'}`;
     grouped[key] ||= [];
     grouped[key].push(row);
   }
@@ -166,5 +209,7 @@ module.exports = {
   getResults,
   getRanking,
   getSyncStatus,
-  saveSyncStatus
+  saveSyncStatus,
+  getEventGroup,
+  getEventSurface
 };

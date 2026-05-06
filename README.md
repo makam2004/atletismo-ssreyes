@@ -82,3 +82,20 @@ Normalmente significa que los nombres de columnas del Excel no coinciden. La app
 - Marca: `marca`, `tiempo`, `resultado`, `mark`, `time`
 
 Si tu Excel usa otros nombres, edita `src/parser.js` y añade esos nombres en los arrays.
+
+## Mejora v4: pruebas agrupadas AL/PC
+
+El desplegable de prueba agrupa automáticamente las pruebas que terminan en `AL` o `PC`.
+
+Ejemplo:
+
+- `60m FEM. AL`
+- `60m FEM. PC`
+
+aparecen en el filtro como:
+
+- `60m FEM.`
+
+La tabla y el ranking mantienen una columna `Superficie` para indicar si la marca procede de `AL` o `PC`.
+
+No es necesario cambiar la base de datos para esta mejora. Los datos originales siguen guardados en `event_name`.

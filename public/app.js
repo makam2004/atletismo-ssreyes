@@ -1,6 +1,15 @@
 const $ = id => document.getElementById(id);
 const filters = ['category','event','club','athlete'];
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function qs(){
   const p = new URLSearchParams();
   filters.forEach(f=>{ const v=$(f).value; if(v) p.set(f,v); });
@@ -22,8 +31,8 @@ async function loadStatus(){
   const s=data.status;
   if(!s){ $('statusText').innerHTML='Todavía no hay sincronización registrada.'; return; }
   $('statusText').innerHTML = s.last_error
-    ? `<span class="error">Error: ${s.last_error}</span>`
-    : `<span class="ok">OK</span> · Archivo: <b>${s.source_file_name || '-'}</b> · Filas: <b>${s.imported_rows || 0}</b> · Última sync: ${s.last_success_at || '-'}`;
+    ? `<span class="error">Error: ${escapeHtml(s.last_error)}</span>`
+    : `<span class="ok">OK</span> · Archivo: <b>${escapeHtml(s.source_file_name || '-')}</b> · Filas: <b>${s.imported_rows || 0}</b> · Última sync: ${escapeHtml(s.last_success_at || '-')}`;
 }
 async function loadOptions(){
   const o = await api('/api/options');
@@ -32,7 +41,7 @@ async function loadOptions(){
 async function loadResults(){
   const rows = await api('/api/results?' + qs());
   const tb = document.querySelector('#resultsTable tbody'); tb.innerHTML='';
-  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${r.category||''}</td><td>${r.event_name||''}</td><td>${r.athlete_name||''}</td><td>${r.club_name||''}</td><td>${r.mark_raw||''}</td>`; tb.appendChild(tr); });
+  rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${escapeHtml(r.category)}</td><td>${escapeHtml(r.event_group || r.event_name)}</td><td>${escapeHtml(r.surface || '')}</td><td>${escapeHtml(r.athlete_name)}</td><td>${escapeHtml(r.club_name)}</td><td>${escapeHtml(r.mark_raw)}</td>`; tb.appendChild(tr); });
 }
 async function loadRanking(){
   const groups = await api('/api/ranking?' + qs());
@@ -40,11 +49,11 @@ async function loadRanking(){
   if(!groups.length){ root.innerHTML='<p class="muted">No hay datos para estos filtros.</p>'; return; }
   groups.forEach(g=>{
     const div=document.createElement('div'); div.className='group';
-    div.innerHTML=`<h3>${g.group}</h3><div class="tableWrap"><table><thead><tr><th>#</th><th>Atleta</th><th>Club</th><th>Marca</th></tr></thead><tbody>${g.items.map(r=>`<tr><td>${r.rank}</td><td>${r.athlete_name||''}</td><td>${r.club_name||''}</td><td>${r.mark_raw||''}</td></tr>`).join('')}</tbody></table></div>`;
+    div.innerHTML=`<h3>${escapeHtml(g.group)}</h3><div class="tableWrap"><table><thead><tr><th>#</th><th>Atleta</th><th>Club</th><th>Marca</th><th>Superficie</th></tr></thead><tbody>${g.items.map(r=>`<tr><td>${r.rank}</td><td>${escapeHtml(r.athlete_name)}</td><td>${escapeHtml(r.club_name)}</td><td>${escapeHtml(r.mark_raw)}</td><td>${escapeHtml(r.surface || '')}</td></tr>`).join('')}</tbody></table></div>`;
     root.appendChild(div);
   });
 }
 async function refresh(){ await loadStatus(); await loadOptions(); await loadRanking(); await loadResults(); }
 filters.forEach(f=>$(f).addEventListener('change',()=>{ loadRanking(); loadResults(); }));
 $('syncBtn').addEventListener('click', async()=>{ $('syncBtn').disabled=true; $('syncBtn').textContent='Actualizando...'; try{ await api('/api/sync',{method:'POST'}); await refresh(); }catch(e){ alert(e.message); } finally{ $('syncBtn').disabled=false; $('syncBtn').textContent='Actualizar ahora'; }});
-refresh().catch(e=>{ $('statusText').innerHTML=`<span class="error">${e.message}</span>`; });
+refresh().catch(e=>{ $('statusText').innerHTML=`<span class="error">${escapeHtml(e.message)}</span>`; });
