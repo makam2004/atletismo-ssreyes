@@ -12,6 +12,48 @@ function sortEs(values) {
   return values.sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }));
 }
 
+function normalizeText(value) {
+  return cleanValue(value)
+    ?.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase() || '';
+}
+
+function isFieldEvent(eventName) {
+  const event = normalizeText(getEventGroup(eventName) || eventName);
+  const fieldEventKeywords = [
+    'altura',
+    'longitud',
+    'peso',
+    'pelota',
+    'jabalina',
+    'disco',
+    'martillo',
+    'triple',
+    'pertiga'
+  ];
+  return fieldEventKeywords.some(keyword => event.includes(keyword));
+}
+
+function compareMarks(a, b, eventName) {
+  const aValue = a?.mark_value;
+  const bValue = b?.mark_value;
+  const aMissing = aValue === null || aValue === undefined;
+  const bMissing = bValue === null || bValue === undefined;
+
+  if (aMissing && bMissing) return 0;
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+
+  // Carreras: menor tiempo gana. Concursos: mayor marca gana.
+  return isFieldEvent(eventName) ? bValue - aValue : aValue - bValue;
+}
+
+function isBetterMark(candidate, current, eventName) {
+  if (!current) return true;
+  return compareMarks(candidate, current, eventName) < 0;
+}
+
 function getEventSurface(eventName) {
   const event = cleanValue(eventName) || '';
   const match = event.match(/(?:\s|\.)(AL|PC)$/i);
@@ -140,7 +182,7 @@ async function getResults(filters = {}) {
   return rows.sort((a, b) => {
     const byEvent = String(a.event_group || '').localeCompare(String(b.event_group || ''), 'es', { numeric: true, sensitivity: 'base' });
     if (byEvent !== 0) return byEvent;
-    const byMark = (a.mark_value ?? Infinity) - (b.mark_value ?? Infinity);
+    const byMark = compareMarks(a, b, a.event_group || a.event_name || b.event_group || b.event_name);
     if (byMark !== 0) return byMark;
     return String(a.athlete_name || '').localeCompare(String(b.athlete_name || ''), 'es');
   });
@@ -157,10 +199,8 @@ async function getRanking(filters = {}) {
     const clubName = cleanValue(row.club_name) || '';
     const key = `${category}|${eventGroup}|${athleteName}|${clubName}`;
     const current = best.get(key);
-    const rowValue = row.mark_value ?? Infinity;
-    const currentValue = current?.mark_value ?? Infinity;
 
-    if (!current || rowValue < currentValue) {
+    if (isBetterMark(row, current, eventGroup || row.event_name)) {
       best.set(key, row);
     }
   }
@@ -177,7 +217,7 @@ async function getRanking(filters = {}) {
       group,
       items: items
         .sort((a, b) => {
-          const byMark = (a.mark_value ?? Infinity) - (b.mark_value ?? Infinity);
+          const byMark = compareMarks(a, b, a.event_group || a.event_name || b.event_group || b.event_name);
           if (byMark !== 0) return byMark;
           return String(a.athlete_name || '').localeCompare(String(b.athlete_name || ''), 'es');
         })
@@ -211,5 +251,6 @@ module.exports = {
   getSyncStatus,
   saveSyncStatus,
   getEventGroup,
-  getEventSurface
+  getEventSurface,
+  isFieldEvent
 };

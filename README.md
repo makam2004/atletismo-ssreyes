@@ -99,3 +99,24 @@ aparecen en el filtro como:
 La tabla y el ranking mantienen una columna `Superficie` para indicar si la marca procede de `AL` o `PC`.
 
 No es necesario cambiar la base de datos para esta mejora. Los datos originales siguen guardados en `event_name`.
+
+## Mejora v5: orden correcto en concursos
+
+La clasificación ahora ordena automáticamente:
+
+- **Carreras y marchas**: de menor a mayor marca, porque gana el menor tiempo.
+- **Concursos**: de mayor a menor marca, porque gana la mayor distancia/altura.
+
+Se consideran concursos las pruebas cuyo nombre contiene:
+
+- Altura
+- Longitud
+- Peso
+- Pelota
+- Jabalina
+- Disco
+- Martillo
+- Triple
+- Pértiga / Pertiga
+
+No es necesario cambiar Supabase ni reimportar datos. La mejora se aplica al calcular resultados y rankings.
